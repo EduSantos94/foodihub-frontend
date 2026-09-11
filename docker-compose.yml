@@ -10,15 +10,17 @@ services:
       - "3000:80"
     env_file:
       - .env
+    environment:
+      VITE_FOODIHUB_API_URL: http://backend:3333
     networks:
-      - foodihub_frontend
+      - foodihub_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      test: [ "CMD", "curl", "-f", "http://localhost:80/" ]
       interval: 15s
       timeout: 5s
       retries: 5
 
 # ==================== Networks ====================
 networks:
-  foodihub_frontend:
-    driver: bridge
+  foodihub_network:
+    external: true
