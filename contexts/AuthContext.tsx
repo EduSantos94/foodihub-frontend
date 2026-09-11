@@ -85,8 +85,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     error: state.error,
     signIn: async (email: string, password: string) => {
       try {
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3333';
         const response = await axios.post(
-          `${process.env.EXPO_PUBLIC_API_URL}/auth/login`,
+          `${API_URL}/auth/login`,
           { email, password }
         );
 
