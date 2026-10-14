@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setUnauthorizedHandler } from '@/lib/api';
 
 interface User {
   id: string;
@@ -8,6 +9,7 @@ interface User {
   first_name: string;
   last_name: string;
   role: string;
+  is_platform_admin?: boolean;
 }
 
 interface AuthContextType {
@@ -29,7 +31,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         case 'RESTORE_TOKEN':
           return {
             ...prevState,
-            userToken: action.payload,
+            userToken: action.payload.token,
+            user: action.payload.user,
             isLoading: false,
           };
         case 'SIGN_IN':
@@ -68,13 +71,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         // Restaurar token do AsyncStorage
         const token = await AsyncStorage.getItem('userToken');
-        dispatch({ type: 'RESTORE_TOKEN', payload: token });
+        const storedUser = await AsyncStorage.getItem('userData');
+        dispatch({
+          type: 'RESTORE_TOKEN',
+          payload: { token, user: token && storedUser ? JSON.parse(storedUser) : null },
+        });
       } catch (e) {
         console.error('Erro ao restaurar token:', e);
+        dispatch({ type: 'RESTORE_TOKEN', payload: { token: null, user: null } });
       }
     };
 
     bootstrapAsync();
+  }, []);
+
+  // An expired/invalid token (401) logs the user out; the root layout then redirects to login
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      AsyncStorage.multiRemove(['userToken', 'userData']).finally(() => dispatch({ type: 'SIGN_OUT' }));
+    });
+    return () => setUnauthorizedHandler(null);
   }, []);
 
   const authContext: AuthContextType = {
@@ -95,6 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Armazenar token
         await AsyncStorage.setItem('userToken', token);
+        await AsyncStorage.setItem('userData', JSON.stringify(user));
 
         dispatch({
           type: 'SIGN_IN',
@@ -109,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut: async () => {
       try {
         await AsyncStorage.removeItem('userToken');
+        await AsyncStorage.removeItem('userData');
         dispatch({ type: 'SIGN_OUT' });
       } catch (error) {
         console.error('Erro ao deslogar:', error);
