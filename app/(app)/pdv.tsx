@@ -3,10 +3,20 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDi
 import { api, errorMessage, listPage } from '@/lib/api';
 import { formatBRL, fullName, parseDecimal } from '@/lib/format';
 import { colors, DESKTOP_BREAKPOINT, font, radius, space } from '@/lib/theme';
-import { Customer, DELIVERY_LABEL, DeliveryType, PAYMENT_LABEL, PaymentMethod, Product } from '@/lib/types';
+import { Customer, DELIVERY_LABEL, DeliveryType, PAYMENT_LABEL, PaymentMethod, Product, ProductSize } from '@/lib/types';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Feedback';
 import { SelectField, SwitchField, TextField } from '@/components/ui/Inputs';
+import { Dialog } from '@/components/ui/Modal';
+
+interface CartLine {
+  key: string;
+  product: Product;
+  sizeId?: string;
+  sizeName?: string;
+  qty: number;
+}
+const lineKey = (productId: string, sizeId?: string) => `${productId}:${sizeId ?? ''}`;
 
 const toOptions = (labels: Record<string, string>) => Object.entries(labels).map(([value, label]) => ({ value, label }));
 
@@ -20,7 +30,9 @@ export default function PdvScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  const [cart, setCart] = useState<Record<string, number>>({});
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [picking, setPicking] = useState<{ product: Product; sizes: ProductSize[] } | null>(null);
+  const [checkingId, setCheckingId] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState('');
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('takeout');
   const [address, setAddress] = useState('');
@@ -51,37 +63,60 @@ export default function PdvScreen() {
     load();
   }, [load]);
 
-  const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return term ? products.filter((p) => p.name.toLowerCase().includes(term)) : products;
   }, [products, search]);
 
-  const lines = useMemo(
-    () =>
-      Object.entries(cart)
-        .map(([id, qty]) => ({ product: byId.get(id)!, qty }))
-        .filter((l) => l.product),
-    [cart, byId]
-  );
+  const lines = cart;
+  const inCartOf = (productId: string) => cart.filter((l) => l.product.id === productId).reduce((sum, l) => sum + l.qty, 0);
   const subtotal = lines.reduce((sum, l) => sum + Number(l.product.price) * l.qty, 0);
   const discount = discountText.trim() === '' ? 0 : parseDecimal(discountText);
   const discountInvalid = Number.isNaN(discount) || discount < 0 || discount > subtotal;
   const total = subtotal - (discountInvalid ? 0 : discount);
 
-  const setQty = (product: Product, qty: number) => {
+  /** Changes the quantity of one cart line; the stock limit is shared by every size of the product. */
+  const changeQty = (line: CartLine, delta: number) => {
     setSuccess(null);
     setCart((prev) => {
-      const next = { ...prev };
-      const max = Number(product.amount);
-      if (qty <= 0) delete next[product.id];
-      else next[product.id] = Math.min(qty, max);
-      return next;
+      const others = prev.filter((l) => l.product.id === line.product.id && l.key !== line.key).reduce((sum, l) => sum + l.qty, 0);
+      const max = Math.max(Number(line.product.amount) - others, 0);
+      return prev
+        .map((l) => (l.key === line.key ? { ...l, qty: Math.min(l.qty + delta, max) } : l))
+        .filter((l) => l.qty > 0);
     });
   };
 
+  const addToCart = (product: Product, size?: ProductSize) => {
+    setSuccess(null);
+    setPicking(null);
+    setCart((prev) => {
+      const key = lineKey(product.id, size?.id);
+      const total = prev.filter((l) => l.product.id === product.id).reduce((sum, l) => sum + l.qty, 0);
+      if (total >= Number(product.amount)) return prev;
+      const existing = prev.find((l) => l.key === key);
+      if (existing) return prev.map((l) => (l.key === key ? { ...l, qty: l.qty + 1 } : l));
+      return [...prev, { key, product, sizeId: size?.id, sizeName: size?.name, qty: 1 }];
+    });
+  };
+
+  /** Products with active sizes ask which one; the others go straight to the cart. */
+  const pick = async (product: Product) => {
+    setCheckingId(product.id);
+    try {
+      const res = await api.get(`/api/products/${product.id}/sizes`);
+      const sizes: ProductSize[] = (res.data.data ?? []).filter((s: ProductSize) => s.active);
+      if (sizes.length > 0) setPicking({ product, sizes });
+      else addToCart(product);
+    } catch {
+      addToCart(product); // sizes are optional: a failure to load them must not block the sale
+    } finally {
+      setCheckingId(null);
+    }
+  };
+
   const reset = () => {
-    setCart({});
+    setCart([]);
     setCustomerId('');
     setDeliveryType('takeout');
     setAddress('');
@@ -100,7 +135,7 @@ export default function PdvScreen() {
     setSaving(true);
     try {
       const res = await api.post('/api/sales', {
-        items: lines.map((l) => ({ product_id: l.product.id, quantity: l.qty })),
+        items: lines.map((l) => ({ product_id: l.product.id, product_size_id: l.sizeId, quantity: l.qty })),
         customer_id: customerId || undefined,
         delivery_type: deliveryType,
         delivery_address: deliveryType === 'delivery' ? address.trim() : undefined,
@@ -139,12 +174,12 @@ export default function PdvScreen() {
           {visible.map((p) => {
             const stock = Number(p.amount);
             const out = stock <= 0;
-            const inCart = cart[p.id] ?? 0;
+            const inCart = inCartOf(p.id);
             return (
               <Pressable
                 key={p.id}
-                disabled={out || inCart >= stock}
-                onPress={() => setQty(p, inCart + 1)}
+                disabled={out || inCart >= stock || checkingId === p.id}
+                onPress={() => pick(p)}
                 accessibilityRole="button"
                 accessibilityLabel={`Adicionar ${p.name}`}
                 style={({ hovered }: any) => [styles.tile, hovered && !out && styles.tileHover, (out || inCart >= stock) && styles.tileOff]}
@@ -173,17 +208,18 @@ export default function PdvScreen() {
       {lines.length === 0 ? (
         <Text style={styles.muted}>Toque em um produto para adicionar.</Text>
       ) : (
-        lines.map(({ product, qty }) => (
-          <View key={product.id} style={styles.line}>
+        lines.map((line) => (
+          <View key={line.key} style={styles.line}>
             <View style={{ flex: 1 }}>
               <Text style={styles.lineName} numberOfLines={1}>
-                {product.name}
+                {line.product.name}
+                {line.sizeName ? ` (${line.sizeName})` : ''}
               </Text>
-              <Text style={styles.lineSub}>{formatBRL(Number(product.price) * qty)}</Text>
+              <Text style={styles.lineSub}>{formatBRL(Number(line.product.price) * line.qty)}</Text>
             </View>
-            <Button label="−" variant="secondary" small onPress={() => setQty(product, qty - 1)} />
-            <Text style={styles.qty}>{qty}</Text>
-            <Button label="+" variant="secondary" small disabled={qty >= Number(product.amount)} onPress={() => setQty(product, qty + 1)} />
+            <Button label="−" variant="secondary" small onPress={() => changeQty(line, -1)} />
+            <Text style={styles.qty}>{line.qty}</Text>
+            <Button label="+" variant="secondary" small disabled={inCartOf(line.product.id) >= Number(line.product.amount)} onPress={() => changeQty(line, 1)} />
           </View>
         ))
       )}
@@ -268,6 +304,12 @@ export default function PdvScreen() {
           {checkout}
         </>
       )}
+
+      <Dialog visible={picking !== null} title={picking ? `Tamanho — ${picking.product.name}` : ''} onClose={() => setPicking(null)} width={420}>
+        {picking?.sizes.map((size) => (
+          <Button key={size.id} label={size.name} variant="secondary" onPress={() => addToCart(picking.product, size)} style={{ marginBottom: space.sm }} />
+        ))}
+      </Dialog>
     </ScrollView>
   );
 }

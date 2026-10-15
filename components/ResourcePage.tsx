@@ -12,7 +12,7 @@ import { ConfirmDialog, Dialog } from './ui/Modal';
 export interface FieldDef {
   key: string;
   label: string;
-  type?: 'text' | 'textarea' | 'decimal' | 'integer' | 'select' | 'switch' | 'email';
+  type?: 'text' | 'textarea' | 'decimal' | 'integer' | 'select' | 'switch' | 'email' | 'password';
   required?: boolean;
   placeholder?: string;
   help?: string;
@@ -47,6 +47,18 @@ export interface ResourceConfig<T extends { id: string }> {
   lookups?: Record<string, { endpoint: string; label: (row: any) => string }>;
   itemName: (row: T) => string;
   emptyHint?: string;
+  /** Records are created elsewhere (e.g. stores sign up on their own): hides the "new" button */
+  noCreate?: boolean;
+  /** Records are deactivated (an "active" switch) instead of deleted: hides the delete button */
+  noDelete?: boolean;
+  /** Extra validation for "password" fields */
+  minPasswordLength?: number;
+}
+
+export interface RowActionContext {
+  reload: () => void;
+  notify: (message: string) => void;
+  fail: (message: string) => void;
 }
 
 type Values = Record<string, string | boolean>;
@@ -55,7 +67,7 @@ interface Props<T extends { id: string }> {
   config: ResourceConfig<T>;
   canWrite: boolean;
   /** Extra buttons on each row (e.g. "Tamanhos") */
-  rowActions?: (row: T) => React.ReactNode;
+  rowActions?: (row: T, ctx: RowActionContext) => React.ReactNode;
   /** Message when the user cannot write */
   readOnlyNote?: string;
 }
@@ -181,6 +193,8 @@ export function ResourcePage<T extends { id: string }>({ config, canWrite, rowAc
         if (!Number.isInteger(n) || n < 0) next[f.key] = 'Informe um número inteiro (maior ou igual a 0)';
       } else if (f.type === 'email' && !EMAIL.test(text)) {
         next[f.key] = 'E-mail inválido';
+      } else if (f.type === 'password' && text.length < (config.minPasswordLength ?? 8)) {
+        next[f.key] = `A senha deve ter ao menos ${config.minPasswordLength ?? 8} caracteres`;
       }
     }
     setErrors(next);
@@ -196,6 +210,8 @@ export function ResourcePage<T extends { id: string }>({ config, canWrite, rowAc
         continue;
       }
       const text = String(v ?? '').trim();
+      // an empty secret on edit means "keep the current one", never "erase it"
+      if (!text && f.type === 'password') continue;
       if (!text) {
         // creating: leave optional fields out; editing: clear them
         if (!isNew) payload[f.key] = f.required ? undefined : null;
@@ -243,6 +259,18 @@ export function ResourcePage<T extends { id: string }>({ config, canWrite, rowAc
     }
   };
 
+  const rowCtx: RowActionContext = {
+    reload: () => load(page),
+    notify: (m) => {
+      setLoadError(null);
+      setNotice(m);
+    },
+    fail: (m) => {
+      setNotice(null);
+      setLoadError(m);
+    },
+  };
+
   const columns = useMemo(() => config.columns(lookups), [config, lookups]);
   const newLabel = `${config.feminine ? 'Nova' : 'Novo'} ${config.singular}`;
 
@@ -255,7 +283,7 @@ export function ResourcePage<T extends { id: string }>({ config, canWrite, rowAc
           </Text>
           {config.subtitle ? <Text style={styles.subtitle}>{config.subtitle}</Text> : null}
         </View>
-        {canWrite ? <Button label={`+ ${newLabel}`} onPress={() => openForm('new')} /> : null}
+        {canWrite && !config.noCreate ? <Button label={`+ ${newLabel}`} onPress={() => openForm('new')} /> : null}
       </View>
 
       {!canWrite && readOnlyNote ? <Banner tone="info" message={readOnlyNote} /> : null}
@@ -280,27 +308,31 @@ export function ResourcePage<T extends { id: string }>({ config, canWrite, rowAc
           rowKey={(r) => r.id}
           loading={loading}
           emptyTitle={`Nenhum${config.feminine ? 'a' : ''} ${config.singular} ${config.feminine ? 'cadastrada' : 'cadastrado'}`}
-          emptyHint={canWrite ? (config.emptyHint ?? `Use “${newLabel}” para começar.`) : undefined}
+          emptyHint={canWrite && !config.noCreate ? (config.emptyHint ?? `Use “${newLabel}” para começar.`) : undefined}
           pagination={result?.pagination}
           onPageChange={setPage}
           actions={
             canWrite
               ? (row) => (
                   <>
-                    {rowActions?.(row)}
+                    {rowActions?.(row, rowCtx)}
                     <Button label="Editar" variant="ghost" small onPress={() => openForm(row)} />
-                    <Button
-                      label="Excluir"
-                      variant="ghost"
-                      small
-                      onPress={() => {
-                        setDeleteError(null);
-                        setDeleting(row);
-                      }}
-                    />
+                    {config.noDelete ? null : (
+                      <Button
+                        label="Excluir"
+                        variant="ghost"
+                        small
+                        onPress={() => {
+                          setDeleteError(null);
+                          setDeleting(row);
+                        }}
+                      />
+                    )}
                   </>
                 )
               : rowActions
+                ? (row) => rowActions(row, rowCtx)
+                : undefined
           }
         />
       </View>
@@ -349,6 +381,7 @@ export function ResourcePage<T extends { id: string }>({ config, canWrite, rowAc
               placeholder={f.placeholder}
               maxLength={f.maxLength}
               multiline={f.type === 'textarea'}
+              secure={f.type === 'password'}
               keyboardType={f.type === 'decimal' ? 'decimal-pad' : f.type === 'integer' ? 'number-pad' : f.type === 'email' ? 'email-address' : 'default'}
               value={String(values[f.key] ?? '')}
               onChangeText={(t) => setValue(f.key, t)}

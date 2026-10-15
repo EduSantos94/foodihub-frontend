@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { listPage } from '@/lib/api';
+import { api, listPage } from '@/lib/api';
+import { formatBRL } from '@/lib/format';
+import { ReportOverview } from '@/lib/types';
 import { colors, font, radius, space } from '@/lib/theme';
 
 interface Card {
@@ -26,6 +28,8 @@ export default function DashboardScreen() {
   const router = useRouter();
   const [totals, setTotals] = useState<Record<string, number | null>>({});
   const [loading, setLoading] = useState(true);
+  const [report, setReport] = useState<ReportOverview | null>(null);
+  const canSeeReports = user?.role === 'admin' || user?.role === 'manager';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -47,12 +51,38 @@ export default function DashboardScreen() {
     load();
   }, [load]);
 
+  // sales summary is only for admin/manager; if it fails the registry cards still work
+  useEffect(() => {
+    if (!canSeeReports) return;
+    api
+      .get('/api/reports/overview')
+      .then((res) => setReport(res.data.data))
+      .catch(() => undefined);
+  }, [canSeeReports]);
+
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
       <Text style={styles.title} accessibilityRole="header">
         Olá{user?.first_name ? `, ${user.first_name}` : ''}
       </Text>
       <Text style={styles.subtitle}>Comece pelos cadastros: eles alimentam vendas e estoque.</Text>
+
+      {report ? (
+        <View style={[styles.grid, { marginBottom: space.lg }]}>
+          <Pressable onPress={() => router.push('/reports' as any)} accessibilityRole="link" style={({ hovered }: any) => [styles.card, hovered && styles.cardHover]}>
+            <Text style={styles.cardTitle}>Faturamento (30 dias)</Text>
+            <Text style={styles.cardValue}>{formatBRL(report.summary.total_revenue)}</Text>
+            <Text style={styles.cardHint}>{report.summary.total_sales} venda(s) · ticket médio {formatBRL(report.summary.avg_ticket)}</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/reports' as any)} accessibilityRole="link" style={({ hovered }: any) => [styles.card, hovered && styles.cardHover]}>
+            <Text style={styles.cardTitle}>Estoque baixo</Text>
+            <Text style={styles.cardValue}>
+              {report.low_stock_products.filter((p) => p.amount <= 0).length + report.low_stock_supplies.filter((s) => s.amount <= 0).length}
+            </Text>
+            <Text style={styles.cardHint}>zerados entre os mais baixos</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={styles.grid}>
         {CARDS.map((c) => (

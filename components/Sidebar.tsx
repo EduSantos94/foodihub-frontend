@@ -6,6 +6,8 @@ import { colors, font, radius, space } from '@/lib/theme';
 interface NavItem {
   href: string;
   label: string;
+  /** Only these roles see the item (everyone when omitted) */
+  roles?: string[];
 }
 
 const SECTIONS: { title: string; items: NavItem[] }[] = [
@@ -15,7 +17,12 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: '/pdv', label: 'Nova venda' },
       { href: '/sales', label: 'Vendas' },
+      { href: '/reports', label: 'Relatórios', roles: ['admin', 'manager'] },
     ],
+  },
+  {
+    title: 'Canais',
+    items: [{ href: '/integrations', label: 'Integrações', roles: ['admin', 'manager'] }],
   },
   {
     title: 'Catálogo',
@@ -27,6 +34,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: 'Estoque',
     items: [
+      { href: '/purchases', label: 'Compras' },
       { href: '/supplies', label: 'Insumos' },
       { href: '/suppliers', label: 'Fornecedores' },
     ],
@@ -34,8 +42,20 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
   { title: 'Pessoas', items: [{ href: '/customers', label: 'Clientes' }] },
 ];
 
+const ACCOUNT_SECTION = {
+  title: 'Conta',
+  items: [
+    { href: '/store', label: 'Minha loja' },
+    { href: '/users', label: 'Usuários', roles: ['admin', 'manager'] },
+    { href: '/profile', label: 'Meu perfil' },
+  ] as NavItem[],
+};
+
+const PLATFORM_SECTION = { title: 'Plataforma', items: [{ href: '/stores', label: 'Lojas' }] };
+
 interface Props {
   userName: string;
+  platformAdmin?: boolean;
   role: string;
   onSignOut: () => void;
   onNavigate?: () => void;
@@ -43,9 +63,12 @@ interface Props {
 
 const ROLE_LABEL: Record<string, string> = { admin: 'Administrador', manager: 'Gerente', staff: 'Equipe' };
 
-export function Sidebar({ userName, role, onSignOut, onNavigate }: Props) {
+export function Sidebar({ userName, platformAdmin, role, onSignOut, onNavigate }: Props) {
   const pathname = usePathname();
   const router = useRouter();
+  const visibleSections = ([...SECTIONS, ACCOUNT_SECTION, ...(platformAdmin ? [PLATFORM_SECTION] : [])] as { title: string; items: NavItem[] }[])
+    .map((s) => ({ ...s, items: s.items.filter((i) => !i.roles || i.roles.includes(role)) }))
+    .filter((s) => s.items.length > 0);
 
   return (
     <View style={styles.sidebar}>
@@ -54,7 +77,7 @@ export function Sidebar({ userName, role, onSignOut, onNavigate }: Props) {
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: space.lg }}>
-        {SECTIONS.map((section) => (
+        {visibleSections.map((section) => (
           <View key={section.title} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
             {section.items.map((item) => {

@@ -15,3 +15,24 @@ export const toInputNumber = (value: number | string | null | undefined): string
 
 export const fullName = (c: { first_name: string; last_name?: string }): string =>
   [c.first_name, c.last_name].filter(Boolean).join(' ');
+
+/** "2026-10-14" or "2026-10-14T00:00:00.000Z" -> "14/10/2026" (no timezone math: DATE columns have no time) */
+export const formatDate = (value: string | null | undefined): string => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value ?? '');
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '—';
+};
+
+export const todayBR = (): string => {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+};
+
+/** "14/10/2026" -> "2026-10-14"; null when it is not a real date */
+export const parseDateBR = (text: string): string | null => {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text.trim());
+  if (!m) return null;
+  const [, dd, mm, yyyy] = m;
+  const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  if (d.getFullYear() !== Number(yyyy) || d.getMonth() !== Number(mm) - 1 || d.getDate() !== Number(dd)) return null;
+  return `${yyyy}-${mm}-${dd}`;
+};

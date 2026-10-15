@@ -21,6 +21,7 @@ export default function AppLayout() {
     <Sidebar
       userName={user ? `${user.first_name} ${user.last_name}`.trim() || user.email : 'Usuário'}
       role={user?.role ?? ''}
+      platformAdmin={user?.is_platform_admin === true}
       onSignOut={handleSignOut}
       onNavigate={() => setMenuOpen(false)}
     />
