@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, errorMessage } from '@/lib/api';
+import { formatCep, formatPhone, MASKS, unmask } from '@/lib/masks';
 import { colors, font, radius, space } from '@/lib/theme';
 import { Store } from '@/lib/types';
 import { Button } from '@/components/ui/Button';
@@ -28,7 +29,7 @@ export default function StoreScreen() {
         const s: Store = res.data.data?.data?.[0];
         if (!s) throw new Error('empty');
         setStore(s);
-        setForm({ name: s.name ?? '', email: s.email ?? '', phone: s.phone ?? '', address: s.address ?? '', city: s.city ?? '', state: s.state ?? '', zip_code: s.zip_code ?? '' });
+        setForm({ name: s.name ?? '', email: s.email ?? '', phone: formatPhone(s.phone ?? ''), address: s.address ?? '', city: s.city ?? '', state: s.state ?? '', zip_code: formatCep(s.zip_code ?? '') });
       })
       .catch((e) => setLoadError(errorMessage(e, 'Não foi possível carregar a loja.')))
       .finally(() => setLoading(false));
@@ -41,9 +42,14 @@ export default function StoreScreen() {
     setMsg(null);
     if (!form.name.trim()) return setMsg({ tone: 'error', text: 'Informe o nome da loja.' });
     if (!EMAIL.test(form.email.trim())) return setMsg({ tone: 'error', text: 'E-mail inválido.' });
+    for (const key of ['phone', 'state', 'zip_code'] as const) {
+      const error = form[key] ? MASKS[{ phone: 'phone', state: 'uf', zip_code: 'cep' }[key] as 'phone' | 'uf' | 'cep'].validate(form[key]) : null;
+      if (error) return setMsg({ tone: 'error', text: error });
+    }
     setSaving(true);
     try {
-      await api.put(`/api/stores/${store.id}`, Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v.trim()])));
+      const body = { ...Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v.trim()])), phone: unmask('phone', form.phone), zip_code: unmask('cep', form.zip_code) };
+      await api.put(`/api/stores/${store.id}`, body);
       setMsg({ tone: 'success', text: 'Dados da loja atualizados.' });
     } catch (e) {
       setMsg({ tone: 'error', text: errorMessage(e) });
@@ -65,11 +71,11 @@ export default function StoreScreen() {
           {msg ? <View style={styles.gap}><Banner tone={msg.tone} message={msg.text} /></View> : null}
           <TextField label="Nome" required value={form.name} onChangeText={set('name')} maxLength={255} />
           <TextField label="E-mail" required value={form.email} onChangeText={set('email')} keyboardType="email-address" />
-          <TextField label="Telefone" value={form.phone} onChangeText={set('phone')} maxLength={20} />
+          <TextField label="Telefone" mask="phone" value={form.phone} onChangeText={set('phone')} />
           <TextField label="Endereço" value={form.address} onChangeText={set('address')} />
           <TextField label="Cidade" value={form.city} onChangeText={set('city')} />
-          <TextField label="UF" value={form.state} onChangeText={set('state')} maxLength={2} />
-          <TextField label="CEP" value={form.zip_code} onChangeText={set('zip_code')} maxLength={10} />
+          <TextField label="UF" mask="uf" value={form.state} onChangeText={set('state')} />
+          <TextField label="CEP" mask="cep" value={form.zip_code} onChangeText={set('zip_code')} />
           {canEdit ? <Button label="Salvar" onPress={save} loading={saving} /> : null}
         </View>
       ) : null}

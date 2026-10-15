@@ -1,6 +1,7 @@
 import React from 'react';
 import { ResourcePage, ResourceConfig } from '@/components/ResourcePage';
 import { ActiveBadge, Badge, EmptyState } from '@/components/ui/Feedback';
+import { formatPhone } from '@/lib/masks';
 import { Plain, Primary, Secondary } from '@/components/ui/Cell';
 import { useAuth } from '@/contexts/AuthContext';
 import { fullName } from '@/lib/format';
@@ -26,7 +27,7 @@ const config: ResourceConfig<StoreUser> = {
         </>
       ),
     },
-    { key: 'phone', title: 'Telefone', width: 160, render: (u) => <Plain>{u.phone}</Plain> },
+    { key: 'phone', title: 'Telefone', width: 160, render: (u) => <Plain>{u.phone ? formatPhone(u.phone) : ''}</Plain> },
     { key: 'role', title: 'Papel', width: 150, render: (u) => <Badge label={ROLE_LABEL[u.role] ?? u.role} tone={u.role === 'admin' ? 'warning' : 'neutral'} /> },
     { key: 'active', title: 'Situação', width: 100, render: (u) => <ActiveBadge active={u.active} /> },
   ],
@@ -48,7 +49,7 @@ const config: ResourceConfig<StoreUser> = {
         { value: 'admin', label: 'Administrador: acesso total à loja' },
       ],
     },
-    { key: 'phone', label: 'Telefone', maxLength: 20 },
+    { key: 'phone', label: 'Telefone', mask: 'phone' },
     { key: 'active', label: 'Ativo', type: 'switch', editOnly: true, help: 'Desativar bloqueia o acesso na hora.' },
   ],
 };

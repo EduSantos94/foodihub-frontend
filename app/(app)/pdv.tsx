@@ -239,7 +239,7 @@ export default function PdvScreen() {
         label="Desconto (R$)"
         value={discountText}
         onChangeText={setDiscountText}
-        keyboardType="decimal-pad"
+        mask="decimal"
         placeholder="0,00"
         error={discountInvalid ? 'Valor inválido ou maior que o subtotal' : undefined}
       />

@@ -283,7 +283,7 @@ export default function PurchasesScreen() {
           options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
           help={suppliers.length === 0 ? 'Cadastre um fornecedor antes.' : undefined}
         />
-        <TextField label="Data da compra" required value={date} onChangeText={setDate} placeholder="DD/MM/AAAA" maxLength={10} />
+        <TextField label="Data da compra" required value={date} onChangeText={setDate} mask="date" />
         <TextField label="Nº do pedido" value={number} onChangeText={setNumber} maxLength={50} />
         <TextField label="Nota fiscal" value={invoice} onChangeText={setInvoice} maxLength={50} />
         <SelectField label="Forma de pagamento" value={method} onChange={(v) => setMethod(v as PurchasePaymentMethod)} options={METHOD_OPTIONS} />
@@ -301,10 +301,10 @@ export default function PurchasesScreen() {
                 options={supplyOptions}
                 help={supplies.length === 0 ? 'Cadastre insumos antes.' : undefined}
               />
-              <TextField label={`Quantidade${unit ? ` (${unit})` : ''}`} required value={l.quantity} onChangeText={(v) => setLine(i, { quantity: v })} keyboardType="decimal-pad" placeholder="0" />
-              <TextField label={`Preço unitário${unit ? ` (por ${unit})` : ''}`} required value={l.unit_price} onChangeText={(v) => setLine(i, { unit_price: v })} keyboardType="decimal-pad" placeholder="0,00" />
+              <TextField label={`Quantidade${unit ? ` (${unit})` : ''}`} required value={l.quantity} onChangeText={(v) => setLine(i, { quantity: v })} mask="decimal" placeholder="0" />
+              <TextField label={`Preço unitário${unit ? ` (por ${unit})` : ''}`} required value={l.unit_price} onChangeText={(v) => setLine(i, { unit_price: v })} mask="decimal" placeholder="0,00" />
               <TextField label="Lote" value={l.batch_number} onChangeText={(v) => setLine(i, { batch_number: v })} maxLength={50} />
-              <TextField label="Validade" value={l.expiry_date} onChangeText={(v) => setLine(i, { expiry_date: v })} placeholder="DD/MM/AAAA" maxLength={10} />
+              <TextField label="Validade" value={l.expiry_date} onChangeText={(v) => setLine(i, { expiry_date: v })} mask="date" />
               <View style={styles.lineFooter}>
                 <Text style={styles.muted}>Subtotal: {formatBRL(lineTotal(l))}</Text>
                 {lines.length > 1 ? <Button label="Remover item" variant="ghost" small onPress={() => setLines((prev) => prev.filter((_, idx) => idx !== i))} /> : null}

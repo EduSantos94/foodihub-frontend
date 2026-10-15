@@ -103,7 +103,7 @@ export function IntegrationWebhooksDialog({ integration, onClose }: Props) {
 
       <SelectField label="Evento" value={eventType} onChange={setEventType} options={CREATABLE_EVENTS} />
       <TextField label="URL de destino" value={url} onChangeText={setUrl} placeholder="https://exemplo.com/webhook" keyboardType="default" />
-      <TextField label="Tentativas máximas" value={retries} onChangeText={setRetries} keyboardType="number-pad" maxLength={2} help="Entre 1 e 10. Falhas são repetidas com intervalo crescente." />
+      <TextField label="Tentativas máximas" value={retries} onChangeText={setRetries} mask="integer" maxLength={2} help="Entre 1 e 10. Falhas são repetidas com intervalo crescente." />
       <Button label="Adicionar webhook" onPress={add} loading={adding} style={{ alignSelf: 'flex-start', marginBottom: space.xl }} />
 
       <Text style={styles.section}>Webhooks cadastrados</Text>

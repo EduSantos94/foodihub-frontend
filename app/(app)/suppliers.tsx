@@ -1,6 +1,7 @@
 import React from 'react';
 import { ResourcePage, ResourceConfig } from '@/components/ResourcePage';
 import { ActiveBadge } from '@/components/ui/Feedback';
+import { maskCnpj } from '@/lib/cnpj';
 import { Plain, Primary, Secondary } from '@/components/ui/Cell';
 import { Supplier } from '@/lib/types';
 
@@ -21,7 +22,7 @@ const config: ResourceConfig<Supplier> = {
         </>
       ),
     },
-    { key: 'cnpj', title: 'CNPJ', width: 170, render: (s) => <Plain>{s.cnpj}</Plain> },
+    { key: 'cnpj', title: 'CNPJ', width: 170, render: (s) => <Plain>{s.cnpj ? maskCnpj(s.cnpj) : ''}</Plain> },
     {
       key: 'contact',
       title: 'Contato',
@@ -37,14 +38,14 @@ const config: ResourceConfig<Supplier> = {
   ],
   fields: [
     { key: 'name', label: 'Nome', required: true, maxLength: 255 },
-    { key: 'cnpj', label: 'CNPJ', placeholder: '00.000.000/0000-00', maxLength: 18 },
+    { key: 'cnpj', label: 'CNPJ', mask: 'cnpj' },
     { key: 'contact_person', label: 'Pessoa de contato' },
-    { key: 'phone', label: 'Telefone', maxLength: 20 },
+    { key: 'phone', label: 'Telefone', mask: 'phone' },
     { key: 'email', label: 'E-mail', type: 'email' },
     { key: 'address', label: 'Endereço' },
     { key: 'city', label: 'Cidade' },
-    { key: 'state', label: 'UF', maxLength: 2, placeholder: 'SP' },
-    { key: 'zip_code', label: 'CEP', maxLength: 10 },
+    { key: 'state', label: 'UF', mask: 'uf' },
+    { key: 'zip_code', label: 'CEP', mask: 'cep' },
     { key: 'notes', label: 'Observações', type: 'textarea' },
     { key: 'active', label: 'Ativo', type: 'switch', editOnly: true },
   ],

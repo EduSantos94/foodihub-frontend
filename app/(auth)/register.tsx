@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/Inputs';
 import { api, errorMessage } from '@/lib/api';
-import { isValidCnpj, maskCnpj } from '@/lib/cnpj';
+import { isValidCnpj } from '@/lib/cnpj';
+import { MASKS } from '@/lib/masks';
 import { colors, font } from '@/lib/theme';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -35,7 +36,7 @@ export default function RegisterScreen() {
   const [apiError, setApiError] = useState<string | null>(null);
 
   const set = (key: keyof Form) => (value: string) => {
-    setForm((f) => ({ ...f, [key]: key === 'store_document' ? maskCnpj(value) : value }));
+    setForm((f) => ({ ...f, [key]: key === 'store_document' ? MASKS.cnpj.format(value) : value }));
     if (errors[key]) setErrors((e) => ({ ...e, [key]: undefined }));
   };
 
@@ -87,7 +88,7 @@ export default function RegisterScreen() {
         </View>
       ) : null}
       <TextField label="Nome da loja" required value={form.store_name} onChangeText={set('store_name')} error={errors.store_name} maxLength={255} />
-      <TextField label="CNPJ" required value={form.store_document} onChangeText={set('store_document')} error={errors.store_document} keyboardType="number-pad" placeholder="00.000.000/0000-00" maxLength={18} />
+      <TextField label="CNPJ" required value={form.store_document} onChangeText={set('store_document')} error={errors.store_document} mask="cnpj" />
       <TextField label="E-mail da loja" required value={form.store_email} onChangeText={set('store_email')} error={errors.store_email} keyboardType="email-address" />
       <TextField label="Seu nome" required value={form.admin_first_name} onChangeText={set('admin_first_name')} error={errors.admin_first_name} autoComplete="name" />
       <TextField label="Seu sobrenome" required value={form.admin_last_name} onChangeText={set('admin_last_name')} error={errors.admin_last_name} />

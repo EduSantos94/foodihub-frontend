@@ -2,6 +2,8 @@ import React from 'react';
 import { ResourcePage, ResourceConfig } from '@/components/ResourcePage';
 import { ActiveBadge, EmptyState } from '@/components/ui/Feedback';
 import { Button } from '@/components/ui/Button';
+import { maskCnpj } from '@/lib/cnpj';
+import { formatPhone } from '@/lib/masks';
 import { Plain, Primary, Secondary } from '@/components/ui/Cell';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, errorMessage } from '@/lib/api';
@@ -22,7 +24,7 @@ const config: ResourceConfig<Store> = {
       render: (s) => (
         <>
           <Primary>{s.name}</Primary>
-          <Secondary>{s.document}</Secondary>
+          <Secondary>{maskCnpj(s.document)}</Secondary>
         </>
       ),
     },
@@ -32,7 +34,7 @@ const config: ResourceConfig<Store> = {
       render: (s) => (
         <>
           <Plain>{s.email}</Plain>
-          <Secondary>{s.phone}</Secondary>
+          <Secondary>{s.phone ? formatPhone(s.phone) : ''}</Secondary>
         </>
       ),
     },
@@ -42,12 +44,12 @@ const config: ResourceConfig<Store> = {
   fields: [
     { key: 'name', label: 'Nome', required: true, maxLength: 255 },
     { key: 'email', label: 'E-mail', type: 'email', required: true },
-    { key: 'phone', label: 'Telefone', maxLength: 20 },
-    { key: 'document', label: 'CNPJ', required: true, maxLength: 20 },
+    { key: 'phone', label: 'Telefone', mask: 'phone' },
+    { key: 'document', label: 'CNPJ', required: true, mask: 'cnpj' },
     { key: 'address', label: 'Endereço' },
     { key: 'city', label: 'Cidade' },
-    { key: 'state', label: 'UF', maxLength: 2 },
-    { key: 'zip_code', label: 'CEP', maxLength: 10 },
+    { key: 'state', label: 'UF', mask: 'uf' },
+    { key: 'zip_code', label: 'CEP', mask: 'cep' },
   ],
 };
 

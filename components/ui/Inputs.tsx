@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { MASKS, MaskName } from '@/lib/masks';
 import { colors, font, radius, space } from '@/lib/theme';
 
 interface FieldShellProps {
@@ -33,20 +34,23 @@ interface TextFieldProps extends Omit<FieldShellProps, 'children'> {
   secure?: boolean;
   autoComplete?: 'email' | 'new-password' | 'current-password' | 'name' | 'off';
   onSubmit?: () => void;
+  /** Formats while typing and fills in keyboard, length and placeholder (see lib/masks.ts) */
+  mask?: MaskName;
 }
 
-export function TextField({ value, onChangeText, placeholder, multiline, keyboardType, maxLength, secure, autoComplete, onSubmit, ...shell }: TextFieldProps) {
+export function TextField({ value, onChangeText, placeholder, multiline, keyboardType, maxLength, secure, autoComplete, onSubmit, mask, ...shell }: TextFieldProps) {
   const [focused, setFocused] = useState(false);
+  const def = mask ? MASKS[mask] : undefined;
   return (
     <FieldShell {...shell}>
       <TextInput
         value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
+        onChangeText={def ? (t) => onChangeText(def.format(t)) : onChangeText}
+        placeholder={placeholder ?? def?.placeholder}
         placeholderTextColor={colors.faint}
         multiline={multiline}
-        keyboardType={keyboardType}
-        maxLength={maxLength}
+        keyboardType={keyboardType ?? def?.keyboard}
+        maxLength={maxLength ?? def?.maxLength}
         secureTextEntry={secure}
         autoComplete={autoComplete}
         onSubmitEditing={onSubmit}

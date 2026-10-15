@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { api, errorMessage, listPage, Page } from '@/lib/api';
 import { parseDecimal, toInputNumber } from '@/lib/format';
+import { MASKS, MaskName, unmask } from '@/lib/masks';
 import { colors, font, space } from '@/lib/theme';
 import { Button } from './ui/Button';
 import { DataTable, Column } from './ui/DataTable';
@@ -17,6 +18,8 @@ export interface FieldDef {
   placeholder?: string;
   help?: string;
   maxLength?: number;
+  /** Input mask (phone, cnpj, cpf, cep, uf, ...): see lib/masks.ts. Decimal/integer fields get theirs automatically */
+  mask?: MaskName;
   /** Static options for type "select" */
   options?: Option[];
   /** Options loaded from the API for type "select" (first page of up to 100 items) */
@@ -73,6 +76,8 @@ interface Props<T extends { id: string }> {
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const maskOf = (f: FieldDef): MaskName | undefined => f.mask ?? (f.type === 'decimal' ? 'decimal' : f.type === 'integer' ? 'integer' : undefined);
 
 export function ResourcePage<T extends { id: string }>({ config, canWrite, rowActions, readOnlyNote }: Props<T>) {
   const [page, setPage] = useState(1);
@@ -146,6 +151,9 @@ export function ResourcePage<T extends { id: string }>({ config, canWrite, rowAc
       if (f.type === 'switch') initial[f.key] = row === 'new' ? Boolean(f.defaultValue ?? true) : Boolean(raw);
       else if (f.type === 'decimal' || f.type === 'integer') initial[f.key] = raw === undefined || raw === null ? String(f.defaultValue ?? '') : toInputNumber(raw);
       else initial[f.key] = raw === undefined || raw === null ? String(f.defaultValue ?? '') : String(raw);
+      // values stored as digits (phone, CNPJ, ...) are shown formatted
+      const mask = maskOf(f);
+      if (mask && typeof initial[f.key] === 'string') initial[f.key] = MASKS[mask].format(initial[f.key] as string);
     }
     setValues(initial);
     setErrors({});
@@ -170,7 +178,10 @@ export function ResourcePage<T extends { id: string }>({ config, canWrite, rowAc
   };
 
   const setValue = (key: string, v: string | boolean) => {
-    setValues((prev) => ({ ...prev, [key]: v }));
+    const field = config.fields.find((f) => f.key === key);
+    const mask = field ? maskOf(field) : undefined;
+    const next = mask && typeof v === 'string' ? MASKS[mask].format(v) : v;
+    setValues((prev) => ({ ...prev, [key]: next }));
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: '' }));
   };
 
@@ -185,6 +196,12 @@ export function ResourcePage<T extends { id: string }>({ config, canWrite, rowAc
         continue;
       }
       if (!text) continue;
+      const mask = f.mask;
+      const maskError = mask ? MASKS[mask].validate(text) : null;
+      if (maskError) {
+        next[f.key] = maskError;
+        continue;
+      }
       if (f.type === 'decimal') {
         const n = parseDecimal(text);
         if (Number.isNaN(n) || n < 0) next[f.key] = 'Informe um número válido (maior ou igual a 0)';
@@ -217,7 +234,7 @@ export function ResourcePage<T extends { id: string }>({ config, canWrite, rowAc
         if (!isNew) payload[f.key] = f.required ? undefined : null;
         continue;
       }
-      payload[f.key] = f.type === 'decimal' || f.type === 'integer' ? parseDecimal(text) : text;
+      payload[f.key] = f.type === 'decimal' || f.type === 'integer' ? parseDecimal(text) : f.mask ? unmask(f.mask, text) : text;
     }
     return payload;
   };
@@ -380,9 +397,10 @@ export function ResourcePage<T extends { id: string }>({ config, canWrite, rowAc
               error={errors[f.key]}
               placeholder={f.placeholder}
               maxLength={f.maxLength}
+              mask={maskOf(f)}
               multiline={f.type === 'textarea'}
               secure={f.type === 'password'}
-              keyboardType={f.type === 'decimal' ? 'decimal-pad' : f.type === 'integer' ? 'number-pad' : f.type === 'email' ? 'email-address' : 'default'}
+              keyboardType={maskOf(f) ? undefined : f.type === 'email' ? 'email-address' : 'default'}
               value={String(values[f.key] ?? '')}
               onChangeText={(t) => setValue(f.key, t)}
             />

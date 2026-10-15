@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, errorMessage } from '@/lib/api';
+import { formatPhone, MASKS, unmask } from '@/lib/masks';
 import { colors, font, radius, space } from '@/lib/theme';
 import { ROLE_LABEL, StoreUser } from '@/lib/types';
 import { Button } from '@/components/ui/Button';
@@ -37,7 +38,7 @@ export default function ProfileScreen() {
         setProfile(u);
         setFirst(u.first_name ?? '');
         setLast(u.last_name ?? '');
-        setPhone(u.phone ?? '');
+        setPhone(formatPhone(u.phone ?? ''));
       })
       .catch((e) => setLoadError(errorMessage(e, 'Não foi possível carregar o perfil.')))
       .finally(() => setLoading(false));
@@ -47,9 +48,11 @@ export default function ProfileScreen() {
     if (!user) return;
     setSaveMsg(null);
     if (!first.trim()) return setSaveMsg({ tone: 'error', text: 'Informe o nome.' });
+    const phoneError = phone ? MASKS.phone.validate(phone) : null;
+    if (phoneError) return setSaveMsg({ tone: 'error', text: phoneError });
     setSaving(true);
     try {
-      await api.put(`/api/users/${user.id}`, { first_name: first.trim(), last_name: last.trim(), phone: phone.trim() });
+      await api.put(`/api/users/${user.id}`, { first_name: first.trim(), last_name: last.trim(), phone: unmask('phone', phone) });
       setSaveMsg({ tone: 'success', text: 'Perfil atualizado. O nome no menu muda no próximo login.' });
     } catch (e) {
       setSaveMsg({ tone: 'error', text: errorMessage(e) });
@@ -93,7 +96,7 @@ export default function ProfileScreen() {
             {saveMsg ? <View style={styles.gap}><Banner tone={saveMsg.tone} message={saveMsg.text} /></View> : null}
             <TextField label="Nome" required value={first} onChangeText={setFirst} maxLength={100} />
             <TextField label="Sobrenome" value={last} onChangeText={setLast} maxLength={100} />
-            <TextField label="Telefone" value={phone} onChangeText={setPhone} maxLength={20} />
+            <TextField label="Telefone" mask="phone" value={phone} onChangeText={setPhone} />
             <Button label="Salvar" onPress={saveProfile} loading={saving} />
           </View>
 

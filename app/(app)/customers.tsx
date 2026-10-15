@@ -1,6 +1,7 @@
 import React from 'react';
 import { ResourcePage, ResourceConfig } from '@/components/ResourcePage';
 import { ActiveBadge } from '@/components/ui/Feedback';
+import { formatCpf, formatPhone } from '@/lib/masks';
 import { Plain, Primary, Secondary } from '@/components/ui/Cell';
 import { fullName } from '@/lib/format';
 import { Customer } from '@/lib/types';
@@ -18,7 +19,7 @@ const config: ResourceConfig<Customer> = {
       render: (c) => (
         <>
           <Primary>{fullName(c)}</Primary>
-          <Secondary>{c.cpf}</Secondary>
+          <Secondary>{c.cpf ? formatCpf(c.cpf) : ''}</Secondary>
         </>
       ),
     },
@@ -27,7 +28,7 @@ const config: ResourceConfig<Customer> = {
       title: 'Contato',
       render: (c) => (
         <>
-          <Plain>{c.phone}</Plain>
+          <Plain>{c.phone ? formatPhone(c.phone) : ''}</Plain>
           <Secondary>{c.email}</Secondary>
         </>
       ),
@@ -38,13 +39,13 @@ const config: ResourceConfig<Customer> = {
   fields: [
     { key: 'first_name', label: 'Nome', required: true, maxLength: 100 },
     { key: 'last_name', label: 'Sobrenome', maxLength: 100 },
-    { key: 'phone', label: 'Telefone', maxLength: 20 },
+    { key: 'phone', label: 'Telefone', mask: 'phone' },
     { key: 'email', label: 'E-mail', type: 'email' },
-    { key: 'cpf', label: 'CPF', placeholder: '000.000.000-00', maxLength: 14 },
+    { key: 'cpf', label: 'CPF', mask: 'cpf' },
     { key: 'delivery_address', label: 'Endereço de entrega' },
     { key: 'city', label: 'Cidade' },
-    { key: 'state', label: 'UF', maxLength: 2, placeholder: 'SP' },
-    { key: 'zip_code', label: 'CEP', maxLength: 10 },
+    { key: 'state', label: 'UF', mask: 'uf' },
+    { key: 'zip_code', label: 'CEP', mask: 'cep' },
     { key: 'notes', label: 'Observações', type: 'textarea' },
     { key: 'active', label: 'Ativo', type: 'switch', editOnly: true },
   ],
