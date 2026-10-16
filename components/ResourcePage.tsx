@@ -71,6 +71,8 @@ interface Props<T extends { id: string }> {
   canWrite: boolean;
   /** Extra buttons on each row (e.g. "Tamanhos") */
   rowActions?: (row: T, ctx: RowActionContext) => React.ReactNode;
+  /** Extra buttons in the page header (e.g. "Importar planilha"), next to the "new" button */
+  headerActions?: (ctx: RowActionContext) => React.ReactNode;
   /** Message when the user cannot write */
   readOnlyNote?: string;
 }
@@ -79,7 +81,7 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const maskOf = (f: FieldDef): MaskName | undefined => f.mask ?? (f.type === 'decimal' ? 'decimal' : f.type === 'integer' ? 'integer' : undefined);
 
-export function ResourcePage<T extends { id: string }>({ config, canWrite, rowActions, readOnlyNote }: Props<T>) {
+export function ResourcePage<T extends { id: string }>({ config, canWrite, rowActions, headerActions, readOnlyNote }: Props<T>) {
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<Page<T> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -300,6 +302,7 @@ export function ResourcePage<T extends { id: string }>({ config, canWrite, rowAc
           </Text>
           {config.subtitle ? <Text style={styles.subtitle}>{config.subtitle}</Text> : null}
         </View>
+        {headerActions?.(rowCtx)}
         {canWrite && !config.noCreate ? <Button label={`+ ${newLabel}`} onPress={() => openForm('new')} /> : null}
       </View>
 
