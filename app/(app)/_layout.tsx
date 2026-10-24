@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Slot, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from '@/components/Sidebar';
 import { colors, DESKTOP_BREAKPOINT, font, space } from '@/lib/theme';
+
+const TOPBAR_HEIGHT = 56;
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
   const router = useRouter();
   const { width } = useWindowDimensions();
+  // keeps the top bar below the clock/notch and the content above the home indicator on phones
+  const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
   const desktop = width >= DESKTOP_BREAKPOINT;
 
@@ -40,13 +45,19 @@ export default function AppLayout() {
 
   return (
     <View style={styles.column}>
-      <View style={styles.topbar}>
-        <Pressable onPress={() => setMenuOpen((o) => !o)} accessibilityRole="button" accessibilityLabel="Menu" hitSlop={8}>
+      <View style={[styles.topbar, { height: TOPBAR_HEIGHT + insets.top, paddingTop: insets.top }]}>
+        <Pressable onPress={() => setMenuOpen((o) => !o)} accessibilityRole="button" accessibilityLabel="Menu" hitSlop={12} style={styles.burgerButton}>
           <Text style={styles.burger}>{menuOpen ? '✕' : '☰'}</Text>
         </Pressable>
         <Text style={styles.topbarTitle}>FoodiHub</Text>
       </View>
-      {menuOpen ? <View style={styles.drawer}>{sidebar}</View> : <View style={styles.main}><Slot /></View>}
+      {menuOpen ? (
+        <View style={[styles.drawer, { paddingBottom: insets.bottom }]}>{sidebar}</View>
+      ) : (
+        <View style={[styles.main, { paddingBottom: insets.bottom }]}>
+          <Slot />
+        </View>
+      )}
     </View>
   );
 }
@@ -57,7 +68,6 @@ const styles = StyleSheet.create({
   main: { flex: 1 },
   drawer: { flex: 1 },
   topbar: {
-    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
@@ -66,6 +76,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  burger: { fontSize: 22, color: colors.ink },
+  burgerButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  burger: { fontSize: 24, color: colors.ink },
   topbarTitle: { fontSize: font.lg, fontWeight: '800', color: colors.primary },
 });

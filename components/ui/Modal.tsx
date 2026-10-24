@@ -1,5 +1,6 @@
 import React from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from './Button';
 import { Banner } from './Feedback';
 import { colors, font, radius, space } from '@/lib/theme';
@@ -14,9 +15,10 @@ interface DialogProps {
 }
 
 export function Dialog({ visible, title, onClose, children, footer, width = 560 }: DialogProps) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.backdrop}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.backdrop, { paddingTop: space.lg + insets.top, paddingBottom: space.lg + insets.bottom }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Fechar" />
         <View style={[styles.dialog, { maxWidth: width }]}>
           <View style={styles.header}>

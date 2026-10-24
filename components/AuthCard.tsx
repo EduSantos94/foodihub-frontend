@@ -1,11 +1,13 @@
 import React from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, font, radius, space } from '@/lib/theme';
 
 export function AuthCard({ title, subtitle, children, footer }: { title: string; subtitle: string; children: React.ReactNode; footer?: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.page}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: space.xl + insets.top, paddingBottom: space.xl + insets.bottom }]} keyboardShouldPersistTaps="handled">
         <Text style={styles.brand}>FoodiHub</Text>
         <View style={styles.card}>
           <Text style={styles.title} accessibilityRole="header">
