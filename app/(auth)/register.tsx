@@ -8,6 +8,7 @@ import { Banner } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/Inputs';
 import { api, errorMessage } from '@/lib/api';
 import { isValidCnpj } from '@/lib/cnpj';
+import { useRegistrationOpen } from '@/lib/useRegistrationOpen';
 import { MASKS } from '@/lib/masks';
 import { colors, font } from '@/lib/theme';
 
@@ -34,6 +35,7 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const registrationOpen = useRegistrationOpen();
 
   const set = (key: keyof Form) => (value: string) => {
     setForm((f) => ({ ...f, [key]: key === 'store_document' ? MASKS.cnpj.format(value) : value }));
@@ -70,6 +72,22 @@ export default function RegisterScreen() {
     }
   };
 
+  if (registrationOpen === false) {
+    return (
+      <AuthCard
+        title="Cadastro fechado"
+        subtitle="No momento novas lojas só entram por convite."
+        footer={
+          <Pressable onPress={() => router.replace('/(auth)/login')} accessibilityRole="link">
+            <Text style={{ fontSize: font.md, color: colors.primary, fontWeight: '700' }}>Voltar para o login</Text>
+          </Pressable>
+        }
+      >
+        <Text style={{ fontSize: font.md, color: colors.muted, lineHeight: 22 }}>Se você quer usar o FoodiHub na sua loja, fale com a nossa equipe para receber o acesso.</Text>
+      </AuthCard>
+    );
+  }
+
   return (
     <AuthCard
       title="Cadastre sua loja"
@@ -104,6 +122,7 @@ function translate(message: string): string {
   if (message.includes('valid CNPJ')) return 'CNPJ inválido.';
   if (message.includes('document already exists')) return 'Já existe uma loja cadastrada com este CNPJ.';
   if (message.includes('email already exists')) return 'Este e-mail de acesso já está em uso.';
+  if (message.includes('Registration is closed')) return 'O cadastro de novas lojas está fechado.';
   if (message.includes('Too many')) return 'Muitos cadastros deste endereço. Tente novamente mais tarde.';
   if (message.includes('Password')) return 'A senha precisa ter pelo menos 8 caracteres.';
   return message;

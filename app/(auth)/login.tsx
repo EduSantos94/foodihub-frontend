@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/Inputs';
 import { colors, font } from '@/lib/theme';
+import { useRegistrationOpen } from '@/lib/useRegistrationOpen';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const registrationOpen = useRegistrationOpen();
 
   const submit = async () => {
     if (!email.trim() || !password) {
@@ -38,11 +40,13 @@ export default function LoginScreen() {
       title="Entrar"
       subtitle="Acesse o painel da sua loja."
       footer={
-        <Pressable onPress={() => router.push('/(auth)/register')} accessibilityRole="link">
-          <Text style={{ fontSize: font.md, color: colors.muted }}>
-            Ainda não tem conta? <Text style={{ color: colors.primary, fontWeight: '700' }}>Cadastre sua loja</Text>
-          </Text>
-        </Pressable>
+        registrationOpen ? (
+          <Pressable onPress={() => router.push('/(auth)/register')} accessibilityRole="link">
+            <Text style={{ fontSize: font.md, color: colors.muted }}>
+              Ainda não tem conta? <Text style={{ color: colors.primary, fontWeight: '700' }}>Cadastre sua loja</Text>
+            </Text>
+          </Pressable>
+        ) : undefined
       }
     >
       {error ? (

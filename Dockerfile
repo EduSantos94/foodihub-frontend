@@ -1,5 +1,5 @@
 # Stage 1: Build Expo web app
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /usr/src/app
 
@@ -8,6 +8,11 @@ COPY package*.json ./
 RUN npm install --legacy-peer-deps
 
 COPY . .
+
+# Address of the API baked into the web build (the .env file is not copied into the image).
+# In production it is the same address as the site, e.g. https://meuapp.example.com
+ARG EXPO_PUBLIC_API_URL=http://localhost:3333
+ENV EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL
 
 RUN npm run build
 
