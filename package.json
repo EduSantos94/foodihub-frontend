@@ -2,6 +2,9 @@
   "name": "foodihub-frontend",
   "private": true,
   "version": "1.0.0",
+  "engines": {
+    "node": ">=24"
+  },
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
