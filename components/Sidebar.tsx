@@ -8,6 +8,8 @@ interface NavItem {
   label: string;
   /** Only these roles see the item (everyone when omitted) */
   roles?: string[];
+  /** Only the platform admin sees the item */
+  platformOnly?: boolean;
 }
 
 const SECTIONS: { title: string; items: NavItem[] }[] = [
@@ -28,7 +30,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     title: 'Catálogo',
     items: [
       { href: '/products', label: 'Produtos' },
-      { href: '/categories', label: 'Categorias' },
+      { href: '/categories', label: 'Categorias', platformOnly: true },
     ],
   },
   {
@@ -67,7 +69,7 @@ export function Sidebar({ userName, platformAdmin, role, onSignOut, onNavigate }
   const pathname = usePathname();
   const router = useRouter();
   const visibleSections = ([...SECTIONS, ACCOUNT_SECTION, ...(platformAdmin ? [PLATFORM_SECTION] : [])] as { title: string; items: NavItem[] }[])
-    .map((s) => ({ ...s, items: s.items.filter((i) => !i.roles || i.roles.includes(role)) }))
+    .map((s) => ({ ...s, items: s.items.filter((i) => (!i.roles || i.roles.includes(role)) && (!i.platformOnly || platformAdmin)) }))
     .filter((s) => s.items.length > 0);
 
   return (

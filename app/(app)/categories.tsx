@@ -1,6 +1,6 @@
 import React from 'react';
 import { ResourcePage, ResourceConfig } from '@/components/ResourcePage';
-import { ActiveBadge } from '@/components/ui/Feedback';
+import { ActiveBadge, EmptyState } from '@/components/ui/Feedback';
 import { Plain, Primary } from '@/components/ui/Cell';
 import { useAuth } from '@/contexts/AuthContext';
 import { Category } from '@/lib/types';
@@ -26,11 +26,9 @@ const config: ResourceConfig<Category> = {
 
 export default function CategoriesScreen() {
   const { user } = useAuth();
-  return (
-    <ResourcePage
-      config={config}
-      canWrite={user?.is_platform_admin === true}
-      readOnlyNote="As categorias são mantidas pela plataforma e compartilhadas por todas as lojas. Você pode escolher entre elas ao cadastrar produtos; para pedir uma nova, fale com o administrador do sistema."
-    />
-  );
+  // categories are shared by all stores and only the platform admin edits them; everyone else just picks one on the product form
+  if (user?.is_platform_admin !== true) {
+    return <EmptyState title="Acesso restrito" hint="As categorias são mantidas pelo administrador do sistema. Escolha uma delas ao cadastrar um produto." />;
+  }
+  return <ResourcePage config={config} canWrite />;
 }

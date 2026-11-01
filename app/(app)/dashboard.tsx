@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,11 +13,12 @@ interface Card {
   hint: string;
   endpoint: string;
   href: string;
+  platformOnly?: boolean;
 }
 
 const CARDS: Card[] = [
   { key: 'products', title: 'Produtos', hint: 'Itens do cardápio', endpoint: '/api/products', href: '/products' },
-  { key: 'categories', title: 'Categorias', hint: 'Agrupam os produtos', endpoint: '/api/categories', href: '/categories' },
+  { key: 'categories', title: 'Categorias', hint: 'Agrupam os produtos', endpoint: '/api/categories', href: '/categories', platformOnly: true },
   { key: 'supplies', title: 'Insumos', hint: 'Ingredientes e materiais', endpoint: '/api/supplies', href: '/supplies' },
   { key: 'suppliers', title: 'Fornecedores', hint: 'De quem você compra', endpoint: '/api/suppliers', href: '/suppliers' },
   { key: 'customers', title: 'Clientes', hint: 'Quem compra de você', endpoint: '/api/customers', href: '/customers' },
@@ -29,12 +30,14 @@ export default function DashboardScreen() {
   const [totals, setTotals] = useState<Record<string, number | null>>({});
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState<ReportOverview | null>(null);
+  const platformAdmin = user?.is_platform_admin === true;
+  const cards = useMemo(() => CARDS.filter((c) => !c.platformOnly || platformAdmin), [platformAdmin]);
   const canSeeReports = user?.role === 'admin' || user?.role === 'manager';
 
   const load = useCallback(async () => {
     setLoading(true);
     const entries = await Promise.all(
-      CARDS.map(async (c) => {
+      cards.map(async (c) => {
         try {
           const res = await listPage(c.endpoint, 1, 1);
           return [c.key, res.pagination.total] as const;
@@ -45,7 +48,7 @@ export default function DashboardScreen() {
     );
     setTotals(Object.fromEntries(entries));
     setLoading(false);
-  }, []);
+  }, [cards]);
 
   useEffect(() => {
     load();
@@ -85,7 +88,7 @@ export default function DashboardScreen() {
       ) : null}
 
       <View style={styles.grid}>
-        {CARDS.map((c) => (
+        {cards.map((c) => (
           <Pressable
             key={c.key}
             onPress={() => router.push(c.href as any)}
