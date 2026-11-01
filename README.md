@@ -23,7 +23,7 @@ app/
 ## Desenvolvimento Local
 
 ### Pré-requisitos
-- Node.js 18+ ou 20+
+- Node.js 24+
 - Expo CLI: `npm install -g expo-cli`
 - Simulador iOS/Android ou Expo Go app
 

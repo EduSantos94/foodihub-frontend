@@ -2,7 +2,7 @@
 
 ## Pré-requisitos
 
-- Node.js 18+
+- Node.js 24+
 - npm ou yarn
 - Expo CLI: `npm install -g expo-cli`
 - Expo Go app (iOS/Android) ou simulador local
